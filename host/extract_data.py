@@ -54,7 +54,7 @@ def nearest_nibble(s, calib_sums):
     return min(range(16), key=lambda i: abs(calib_sums[i] - s))
 
 
-def extract(image_path, coords_path, canvas_w, canvas_h, sq_width, out_dir, verify):
+def extract(image_path, coords_path, canvas_w, canvas_h, sq_width, out_dir, verify, debug=False):
     print(f'processing {image_path}')
     img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
     if img is None:
@@ -99,13 +99,15 @@ def extract(image_path, coords_path, canvas_w, canvas_h, sq_width, out_dir, veri
         else:
             print('SHA-1 OK')
 
-    os.makedirs(out_dir, exist_ok=True)
-    stem = os.path.splitext(os.path.basename(image_path))[0]
-    out_path = os.path.join(out_dir, f'block_{stem}_{sha1_hex[:16]}.bin')
-    with open(out_path, 'wb') as f:
-        f.write(data_bytes)
-    print(f'wrote {len(data_bytes)} bytes to {out_path}')
-    return out_path
+    if debug:
+        os.makedirs(out_dir, exist_ok=True)
+        stem = os.path.splitext(os.path.basename(image_path))[0]
+        out_path = os.path.join(out_dir, f'block_{stem}_{sha1_hex[:16]}.bin')
+        with open(out_path, 'wb') as f:
+            f.write(data_bytes)
+        print(f'wrote {len(data_bytes)} bytes to {out_path}')
+
+    return data_bytes
 
 
 if __name__ == '__main__':
@@ -115,7 +117,7 @@ if __name__ == '__main__':
     parser.add_argument('--canvasWidth', type=int, default=1200)
     parser.add_argument('--canvasHeight', type=int, default=800)
     parser.add_argument('--blockSize', type=int, default=10)
-    parser.add_argument('--outDir', default='.')
+    parser.add_argument('--outDir', default='output')
     parser.add_argument('--verify', action='store_true', default=False)
     args = parser.parse_args()
-    extract(args.image, args.coords, args.canvasWidth, args.canvasHeight, args.blockSize, args.outDir, args.verify)
+    extract(args.image, args.coords, args.canvasWidth, args.canvasHeight, args.blockSize, args.outDir, args.verify, debug=True)
