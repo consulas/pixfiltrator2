@@ -33,6 +33,12 @@ The guest machine renders encoded data as images in a browser. The host machine 
    ```
    Output is written to `host/output/`.
 
+## TODO
+
+- **Add 7z compression** — Compress the payload with 7z on the guest before encoding and decompress on the host after decoding. This could significantly reduce the number of frames needed for compressible data.
+
+- **Improve pixel encoding density** — The current scheme encodes 4 bits per pixel using a single luminance gradient (black→red→yellow→white), treating all three RGB channels as one summed value. A better approach encodes **4 bits per channel independently** (12 bits per pixel, 3× improvement), mapping each channel to 16 evenly-spaced values (0, 17, 34, ..., 255) with ~17 DN of headroom between steps for compression tolerance. The calibration strip would have one row per channel (R, G, B), and each data pixel would pack a nibble into each channel. Full 8-bit-per-channel encoding (24 bits/pixel, 6×) is also possible but more sensitive to RDP/KVM compression artifacts.
+
 ## Frame Format
 
 Each frame encodes a chunk of data as pixels. The first 40 pixels (left to right, top row) are metadata:
