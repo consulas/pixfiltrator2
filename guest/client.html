@@ -1,0 +1,127 @@
+<html>
+  <head>
+    <link rel="stylesheet" type="text/css" href="client.css">
+  </head>
+  <div id="container">
+    <div id="left">
+      Canvas & block dimensions:<br/>
+      Width: <input type="number" id="canvasWidth" value="1200"><br/>
+      Height: <input type="number" id="canvasHeight" value="800"><br/>
+      Block size:  <input type="number" id="blockSize" value="5"><br/>
+      <button type="button" id="refreshCanvas" onclick="refreshCanvas()">Resize</button><br/>
+      <input type="file" id="fileElem" style="display:none" onchange="handleFiles(this.files)">
+      <br/>
+      <a href="#" id="fileSelect">Select a file</a><br/>
+      <div id="fileList">
+        <p>No files selected!</p>
+      </div>
+      <br/>
+      <div id="sha256">SHA256: ?</div>
+      <br/>
+      Page control:<br/>
+      <button type="button" id="prevBtn" onclick="prev()">&lt;</button>
+      <button type="button" id="playBtn" onclick="play()">Play</button>
+      <button type="button" id="nextBtn" onclick="next()">&gt;</button>
+      <br/>
+      Refresh speed (ms):  <input type="number" id="refreshSpeed" value="1000"><br/>
+      <br/>
+      <div id="pageTracker"><h1>?/?</h1></div>
+      </div>
+    <div id="right">
+      <canvas id="myCanvas" width="1200" height="800"></canvas>
+    </div>
+
+<script type="text/javascript" src="lib.js"></script>
+<script>
+
+var canvas = document.getElementById("myCanvas");
+var ctx = canvas.getContext("2d");
+var sqWidth = document.getElementById("blockSize").value;
+console.log(`sqwidth ${sqWidth}`);
+
+function play() {
+    if (hexArray.length === 0) return;
+    const refreshSpeed = document.getElementById("refreshSpeed").value;
+    setTimeout(draw, refreshSpeed, ctx, offset, hexArray, numSquaresPerPage, numPages, true, refreshSpeed);
+}
+
+clearCanvas(ctx);
+window.URL = window.URL || window.webkitURL;
+
+const fileSelect = document.getElementById("fileSelect"),
+    fileElem = document.getElementById("fileElem"),
+    fileList = document.getElementById("fileList");
+
+fileSelect.addEventListener("click", function (e) {
+  if (fileElem) {
+    fileElem.click();
+  }
+  e.preventDefault();
+}, false);
+
+let hexArray = [];
+let offset = -1;
+let numPages = 0;
+let numSquaresPerPage = 0;
+
+function refreshCanvas() {
+  ctx.canvas.width = document.getElementById("canvasWidth").value;
+  ctx.canvas.height = document.getElementById("canvasHeight").value;
+  sqWidth = document.getElementById("blockSize").value;
+  if (ctx.canvas.width/sqWidth < 60) {
+    alert(`We need at least 60 squares to capture metadata but only have ${ctx.canvas.width/sqWidth}\n` +
+    'You may want to increase the width of the canvas or the block size');
+  }
+  console.log(`Canvas is ${ctx.canvas.width}x${ctx.canvas.height} and block size is ${sqWidth}`);
+  offset = 0;
+  numSquaresPerPage = getNumSquaresPerPage(ctx, sqWidth, true);
+  numPages = calcNumPages(hexArray.length, numSquaresPerPage);
+  clearCanvas(ctx);
+  updateNumPages();
+};
+
+function next(playNext) {
+  if (offset < numPages-1) {
+    offset += 1;
+    updateNumPages();
+    const refreshSpeed = document.getElementById("refreshSpeed").value;
+    draw(ctx, offset, hexArray, numSquaresPerPage, numPages, playNext, refreshSpeed);
+  }
+}
+
+function prev() {
+  if (offset > 0) {
+    offset -= 1;
+    updateNumPages();
+    draw(ctx, offset, hexArray, numSquaresPerPage, numPages, false);
+  }
+}
+
+function kickoff(file) {
+  const fr = new FileReader();
+  fr.onload = () => {
+    const data = fr.result;
+    let array = new Uint8Array(data);
+    console.log(`length of data: ${array.length}`);
+    digestMessage('SHA-256', array).then(h => {
+      console.log(`SHA256: ${h}`);
+      const elem = document.getElementById("sha256");
+      elem.innerHTML = `SHA256: <br/>${h.substr(0,32)}<br/>${h.substr(32,32)}`;
+    });
+    hexArray = [];
+    for(let i=0; i<array.length; i++) {
+      const hex = array[i].toString(16).padStart(2, '0');
+      hexArray.push(hex[0]);
+      hexArray.push(hex[1]);
+    }
+    numSquaresPerPage = getNumSquaresPerPage(ctx, sqWidth, true);
+    numPages = calcNumPages(hexArray.length, numSquaresPerPage);
+    offset = 0;
+    updateNumPages();
+    draw(ctx, offset, hexArray, numSquaresPerPage, numPages, false, 0);
+  }
+  fr.readAsArrayBuffer(file);
+};
+</script>
+
+</html>
