@@ -33,6 +33,18 @@ The guest machine renders encoded data as images in a browser. The host machine 
    ```
    Output is written to `host/output/`.
 
+## Frame Format
+
+Each frame encodes a chunk of data as pixels. The first 40 pixels (left to right, top row) are metadata:
+
+| Pixels | Bytes | Purpose |
+|--------|-------|---------|
+| 1–16   | 48    | Color-coded frame index — each pixel encodes 3 bytes of color channel data used to identify the frame |
+| 17–20  | 12    | Number of bytes in the image payload (encoded across 4 pixels, 3 bytes each) |
+| 21–40  | 60    | SHA-1 hash of the frame payload (20 bytes, encoded across 20 pixels using the first byte of each pixel's RGB channels) |
+
+The remaining pixels encode the raw payload data, 3 bytes per pixel (one per RGB channel).
+
 ## Scripts
 
 Utilities for transferring this project between machines using git patches.
