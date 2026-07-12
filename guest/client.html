@@ -19,13 +19,17 @@
       <div id="sha256">SHA256: ?</div>
       <br/>
       Page control:<br/>
+      <button type="button" id="beginBtn" onclick="begin()">&lt;&lt;</button>
       <button type="button" id="prevBtn" onclick="prev()">&lt;</button>
       <button type="button" id="playBtn" onclick="play()">Play</button>
-      <button type="button" id="nextBtn" onclick="next()">&gt;</button>
+      <button type="button" id="pauseBtn" onclick="pause()" disabled>Pause</button>
+      <button type="button" id="nextBtn" onclick="next(false)">&gt;</button>
+      <button type="button" id="endBtn" onclick="end()">&gt;&gt;</button>
       <br/>
       Refresh speed (ms):  <input type="number" id="refreshSpeed" value="1000"><br/>
       <br/>
       <div id="pageTracker"><h1>?/?</h1></div>
+      <img id="kittenImg" style="display:none; width:300px; height:300px; image-rendering:pixelated; margin-top:8px;">
       </div>
     <div id="right">
       <canvas id="myCanvas" width="1200" height="800"></canvas>
@@ -36,13 +40,25 @@
 
 var canvas = document.getElementById("myCanvas");
 var ctx = canvas.getContext("2d");
-var sqWidth = document.getElementById("blockSize").value;
-console.log(`sqwidth ${sqWidth}`);
+var sqWidth = parseInt(document.getElementById("blockSize").value);
+var isPlaying = false;
+
+function updatePlayPauseButtons() {
+  document.getElementById("playBtn").disabled = isPlaying;
+  document.getElementById("pauseBtn").disabled = !isPlaying;
+}
 
 function play() {
-    if (hexArray.length === 0) return;
-    const refreshSpeed = document.getElementById("refreshSpeed").value;
-    setTimeout(draw, refreshSpeed, ctx, offset, hexArray, numSquaresPerPage, numPages, true, refreshSpeed);
+  if (hexArray.length === 0) return;
+  isPlaying = true;
+  updatePlayPauseButtons();
+  const refreshSpeed = parseInt(document.getElementById("refreshSpeed").value);
+  draw(ctx, offset, hexArray, numSquaresPerPage, numPages, true, refreshSpeed);
+}
+
+function pause() {
+  isPlaying = false;
+  updatePlayPauseButtons();
 }
 
 clearCanvas(ctx);
@@ -65,10 +81,10 @@ let numPages = 0;
 let numSquaresPerPage = 0;
 
 function refreshCanvas() {
-  ctx.canvas.width = document.getElementById("canvasWidth").value;
-  ctx.canvas.height = document.getElementById("canvasHeight").value;
-  sqWidth = document.getElementById("blockSize").value;
-  if (ctx.canvas.width/sqWidth < 60) {
+  ctx.canvas.width = parseInt(document.getElementById("canvasWidth").value);
+  ctx.canvas.height = parseInt(document.getElementById("canvasHeight").value);
+  sqWidth = parseInt(document.getElementById("blockSize").value);
+  if (ctx.canvas.width / sqWidth < 60) {
     alert(`We need at least 60 squares to capture metadata but only have ${ctx.canvas.width/sqWidth}\n` +
     'You may want to increase the width of the canvas or the block size');
   }
@@ -76,16 +92,24 @@ function refreshCanvas() {
   offset = 0;
   numSquaresPerPage = getNumSquaresPerPage(ctx, sqWidth, true);
   numPages = calcNumPages(hexArray.length, numSquaresPerPage);
-  clearCanvas(ctx);
-  updateNumPages();
-};
+  if (hexArray.length > 0) {
+    updateNumPages();
+    draw(ctx, offset, hexArray, numSquaresPerPage, numPages, false, 0);
+  } else {
+    clearCanvas(ctx);
+  }
+}
 
 function next(playNext) {
-  if (offset < numPages-1) {
+  if (playNext && !isPlaying) return;
+  if (offset < numPages - 1) {
     offset += 1;
     updateNumPages();
-    const refreshSpeed = document.getElementById("refreshSpeed").value;
+    const refreshSpeed = parseInt(document.getElementById("refreshSpeed").value);
     draw(ctx, offset, hexArray, numSquaresPerPage, numPages, playNext, refreshSpeed);
+  } else if (playNext) {
+    isPlaying = false;
+    updatePlayPauseButtons();
   }
 }
 
@@ -93,7 +117,23 @@ function prev() {
   if (offset > 0) {
     offset -= 1;
     updateNumPages();
-    draw(ctx, offset, hexArray, numSquaresPerPage, numPages, false);
+    draw(ctx, offset, hexArray, numSquaresPerPage, numPages, false, 0);
+  }
+}
+
+function begin() {
+  if (offset !== 0) {
+    offset = 0;
+    updateNumPages();
+    draw(ctx, offset, hexArray, numSquaresPerPage, numPages, false, 0);
+  }
+}
+
+function end() {
+  if (offset !== numPages - 1) {
+    offset = numPages - 1;
+    updateNumPages();
+    draw(ctx, offset, hexArray, numSquaresPerPage, numPages, false, 0);
   }
 }
 
@@ -121,7 +161,7 @@ function kickoff(file) {
     draw(ctx, offset, hexArray, numSquaresPerPage, numPages, false, 0);
   }
   fr.readAsArrayBuffer(file);
-};
+}
 </script>
 
 </html>

@@ -1,5 +1,6 @@
 import argparse
 import os
+import shutil
 import time
 
 import mss
@@ -27,12 +28,6 @@ if __name__ == "__main__":
         help="directory to save screenshots (default: captures)",
     )
     parser.add_argument(
-        "--max",
-        type=int,
-        default=500,
-        help="maximum number of captures to take (default: 500)",
-    )
-    parser.add_argument(
         "--delay",
         type=float,
         default=0.25,
@@ -58,7 +53,9 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    os.makedirs(args.outDir, exist_ok=True)
+    if os.path.exists(args.outDir):
+        shutil.rmtree(args.outDir)
+    os.makedirs(args.outDir)
 
     if args.countdown > 0:
         print(f"Starting capture in:")
@@ -69,7 +66,7 @@ if __name__ == "__main__":
     attempted = 0
 
     print(
-        f"Capturing up to {args.max} frames to '{args.outDir}' "
+        f"Capturing frames to '{args.outDir}' "
         f"(threshold={args.threshold}, delay={args.delay}s). Ctrl-C to stop."
     )
 
@@ -83,20 +80,18 @@ if __name__ == "__main__":
         print(f"Capturing monitor {args.monitor}: {region}")
 
         try:
-            while attempted < args.max:
+            while True:
                 shot = sct.grab(region)
                 # BGRA -> drop alpha, keep BGR as uint8 array
                 frame = np.array(shot)[:, :, :3]
 
+                attempted += 1
                 if last_frame is None or mean_abs_diff(frame, last_frame) >= args.threshold:
-                    attempted += 1
                     saved += 1
                     fname = os.path.join(args.outDir, f"capture_{saved:05d}.png")
                     mss.tools.to_png(shot.rgb, shot.size, output=fname)
                     print(f"  saved {fname}")
                     last_frame = frame
-                else:
-                    attempted += 1
 
                 time.sleep(args.delay)
         except KeyboardInterrupt:
